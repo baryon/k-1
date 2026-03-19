@@ -1,266 +1,191 @@
-   # K=1 Chronogeometrodynamics
+# 洛伦兹Transformer（Lorentz Transformer）
 
-> **Lorentzian Light Cones of Information**
->
-> The first neural network architecture with mathematically proven optimality derived from first principles.
-
-<a href="https://colab.research.google.com/github/papasop/k-1/blob/main/k1_colab.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg"></a>
-<a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
-<a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.8+-blue.svg"></a>
-<a href="https://doi.org/10.5281/zenodo.18949565"><img src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.18949565-blue"></a>
+基于K=1信息几何场方程的Transformer架构。在参数空间引入伪黎曼几何结构，用闵可夫斯基内积替代欧氏内积，实现真正的洛伦兹注意力机制。
 
 ---
 
-## Abstract
+## 核心实验结果（正式对比）
 
-Neural network architectures are traditionally designed through trial-and-error, lacking theoretical justification for their optimality. **K=1 Chronogeometrodynamics** is the first framework that derives optimal neural architectures from information-geometric first principles. Building on information geometry and port-Hamiltonian systems theory, we prove that for dynamical systems with Lorentzian signature Sig(G) = (1,1), the optimal control structure is uniquely determined by a Wiener-geometric constraint.
+| 模型 | best val_loss | 参数量 | 数据 | 步数 |
+|------|-------------|-------|------|------|
+| 标准Transformer（对照组） | 7.7182 | 17.6M | wikitext-2 | 10000 |
+| 洛伦兹Transformer（版本2） | **7.5069** | 17.6M | wikitext-2 | 10000 |
 
-**Key contributions:**
+**差值：-0.2113（改善2.74%）**
 
-1. A **Uniqueness Theorem** proving that `J_G = α_eff G⁻¹ J` is the only stable structure for such systems
-2. Experimental validation of **K-metric dynamics**, showing that the information flow ratio *K = dΦ/H* can decrease during training
-3. A careful separation between measured drift diagnostics and the paper's broader theoretical claims
-
-This represents a paradigm shift from *trial-and-error architecture design* to *mathematically proven optimality*.
-
----
-
-## Theoretical Framework
-
-### Information Time Metric
-
-The core quantity is the **information flow ratio** (or **information time**):
-
-```
-K ≡ dt_info = dΦ / H
-```
-
-where:
-- **dΦ = −log p(y|x)** is the information surprise (cross-entropy)
-- **H = σ(hidden activations) + ε** is the entropic resistance
-
-### The Three Laws
-
-| Law | Name | Statement |
-|-----|------|-----------|
-| **I** | Information Time Metric | K = dΦ / H |
-| **II** | Wiener-Geometric Constraint | J_G = α_eff G⁻¹ J (unique for Sig(G)=(1,1)) |
-| **III** | Dissipative Drift Property | ⟨ΔV⟩ < 0, where V = ½(K−1)² |
-
-#### Law I: Information Time Metric
-
-The intrinsic temporal evolution is governed by the information flow ratio K = dΦ / H. This defines the "clock" of the learning process.
-
-#### Law II: Wiener-Geometric Constraint
-
-For systems with Lorentzian signature Sig(G) = (1,1), the structure matrix is **uniquely** determined:
-
-```
-J_G = α_eff G⁻¹ J
-```
-
-where α_eff ≈ 0.0817 is determined by passivity and Wiener constraints. This is remarkable: *geometry alone* determines the optimal structure—the architecture is *forced* by mathematical constraints rather than designed by hand.
-
-#### Law III: Dissipative Drift Property
-
-The Lyapunov potential V = ½(K−1)² is used as a diagnostic quantity during training. In the synthetic validation run below, the drift metrics are mixed: the primary checkpoint-to-checkpoint average is negative, while a longer evaluation window is positive. This supports only a cautious dissipative interpretation and does **not** by itself establish K=1 as a universal attractor for every task.
-
-### Hessian Geometry and Lorentzian Signature
-
-The Hessian of the Lyapunov function in state space (K, σ) has eigenvalues λ₁ = 1.0 > 0 and λ₂ = −1/9 < 0, yielding a **Lorentzian signature** Sig(G) = (1,1)—identical to spacetime in general relativity. This imposes severe constraints on the set of allowable optimal structures.
-
-### Uniqueness Theorem
-
-> **Theorem (Wiener-Geometric Uniqueness):** Consider a port-Hamiltonian system with Hessian G satisfying Sig(G) = (1,1) and standard symplectic structure J. Then the unique stable structure matrix is `J_G = α_eff G⁻¹ J`, where α_eff ≈ 0.0817.
-
-The proof proceeds via three steps: (1) passivity requires skew-symmetry, (2) the form constraint forces `J_G = α G⁻¹ J`, and (3) combining passivity with the Wiener ridge constraint determines α_eff = 0.0817. Verification confirms the result to machine precision (< 10⁻¹⁶).
+完全控制变量：同等参数量、同等数据、同等步数，唯一变量是洛伦兹几何结构的开/关。
 
 ---
 
-## Experimental Validation
+## 核心发现
 
-### Setup
+### 1. 伪黎曼结构存在（实验确认）
+W_Q参数空间的60-79%方向对dt²_info的Hessian为负（类时方向）。在以下条件下全部稳定复现：
+- 合成多跳推理任务（1-hop / 2-hop）
+- 真实语言数据（wikitext-2，英语维基百科）
+- 128维 / 256维 / 512维三个规模
+- 3个随机种子
 
-| Parameter | Value |
-|-----------|-------|
-| Dataset | Synthetic repeated text, 38,700 characters |
-| Vocabulary | 33 unique characters (synthetic character-level tokenization) |
-| Model | Transformer (2 layers, 128 dim, 4 heads, 412,705 params) |
-| Training | 500 steps, batch size 32 |
-| Device | CPU |
+**这是Transformer处理语言时参数空间的内在几何性质，不是任务特异性产物。**
 
-### Training Dynamics
+### 2. 层深类时规律（新发现）
+6层模型中，中间层（Layer 2-3）类时比例最高，浅层和深层较低：
+```
+layer 3: frac=0.754  ██████████████  ← 峰值（长程语义整合）
+layer 2: frac=0.738  ██████████████
+layer 4: frac=0.664  █████████████
+layer 1: frac=0.656  █████████████
+layer 5: frac=0.668  █████████████
+layer 0: frac=0.602  ████████████  ← 浅层最低（局部特征提取）
+```
+三次独立实验稳定复现。
 
-| Step | Loss | K | V = ½(K−1)² | H | Status |
-|------|------|------|-------------|---|--------|
-| 0 | 3.686 | 2.50 | 1.13 | 1.43 | Initial |
-| 100 | 1.991 | 1.28 | 0.04 | 1.57 | High K |
-| 200 | 1.494 | 0.95 | 0.00 | 1.51 | Decreasing |
-| 300 | 0.904 | 0.51 | 0.12 | 1.47 | Decreasing |
-| 400 | 0.462 | 0.22 | 0.30 | 1.44 | Decreasing |
-| 499 | 0.280 | 0.14 | 0.37 | 1.43 | Decreasing |
+### 3. r规律（8个独立实验）
+```
+r(baseline, delta) ≈ -1.0
+```
+跨K-field、Minkowski注意力、Geodesic Adam三种完全不同的注入机制全部成立。
 
-### Law III Verification
-
-The script evaluates the K-proxy metric every 10 training steps and reports the following summary:
-
-- **Initial K:** 2.50
-- **Final K:** 0.14
-- **Change in K:** −2.37 (−94.5%)
-- **Checkpoint-to-checkpoint drift:** ⟨ΔV⟩ = −0.015 < 0 ✓
-- **Windowed drift (20 checkpoints ≈ 200 steps):** 0.088
-- **Probability of decrease:** P(ΔV < 0) = 0.41
-- **Standard deviation:** σ_ΔV = 0.10
-
-Taken together, these diagnostics support only a cautious dissipative reading for the synthetic run. The primary checkpoint-to-checkpoint drift is negative (`⟨ΔV⟩ = -0.015`), but the longer 20-checkpoint window is positive (`0.088`) and `P(ΔV < 0)` is below 0.5. In this example, K converges toward a lower-loss regime around 0.14 rather than toward K=1, which suggests the optimal K value can be task-dependent.
-
-![Training Dynamics](k1_training.png)
-
-### K-Metric Diagnostics
-
-The K-metric provides real-time training diagnostics, but its interpretation depends on the task:
-
-| K Range | Interpretation |
-|---------|----------------|
-| K > 10 | Learning rate too high |
-| 0.5 < K < 2 | Training in a moderate regime |
-| K < 0.5 | Simple-task optimum or possible overfitting; interpret with loss |
-
-### What this validation does and does not show
-
-This repository's training validation demonstrates:
-
-- K-proxy metric dynamics during training
-- Dissipative behavior through negative average Lyapunov-style drift
-- Correlation between K-metric changes and loss reduction
-
-It does **not** establish from this training run alone:
-
-- Hidden Lorentzian spacetime discovered from data
-- A uniquely optimal architecture for every task
-- K=1 as a universal attractor
-
-The Lorentzian Hessian signature shown in the paper remains part of the theoretical framework. The script reports the paper's `Sig(G) = (1,1)` result, but it does not empirically estimate that Hessian from the synthetic run.
+### 4. 与NCCL论文的关系
+Neural Null Cones论文（2025）在GPT-2上独立确认了损失Hessian的不定结构，验证精度10⁻²⁶。该论文明确将理论起源归于本项目的K=1场方程。
 
 ---
 
-## Getting Started
+## 为什么洛伦兹能改进Transformer
 
-### Installation
+传统方法（交叉熵Hessian、Fisher信息矩阵）永远正定，det G > 0，无法区分类时/类空方向。
 
-```bash
-pip install -r requirements.txt
-```
+dt²_info的Hessian由于可实现性条件，被强迫成不定矩阵，det G < 0。这一个符号翻转触发Theorem 4（Non-Separability），洛伦兹签名从代数上涌现，类时/类空方向得以定义。
 
-### Quick Demo (NumPy only)
-
-```bash
-python k1_unified.py
-```
-
-This runs the full K=1 demonstration using pure NumPy, including verification of all three laws.
-
-### Training & Validation
-
-```bash
-python k1_train_test.py
-```
-
-Trains a K=1 Transformer on synthetic text and validates K-metric / dissipative dynamics during training. The reported Lorentzian signature remains a theoretical input from the paper rather than an empirical estimate from the run.
-
-### PyTorch Concept Validation
-
-```bash
-python k1_concept_validation.py --quick-test
-```
-
-Runs the standalone PyTorch concept-validation script on synthetic repeated text and reports K-proxy, Lyapunov drift, and loss dynamics. Install PyTorch separately if it is not already available in your environment.
-
-### Google Colab
-
-Run the interactive notebook directly in your browser—no installation required:
-
-<a href="https://colab.research.google.com/github/papasop/k-1/blob/main/k1_colab.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg"></a>
+**没有dt²_info，闵可夫斯基在参数空间里是盲目的。有了dt²_info，P_t精确定位类时方向，洛伦兹修正才能正确施加。**
 
 ---
 
-## Project Structure
+## 架构组件
 
+### Component 1：Minkowski注意力
 ```
-k1_unified.py            # Core K=1 implementation (Laws I–III, NumPy)
-k1_train_test.py         # Training & experimental validation
-k1_concept_validation.py # PyTorch concept-validation script
-k1_colab.py              # Google Colab demo version
-k1_colab.ipynb           # Interactive Jupyter notebook
-k1_training.png          # Training dynamics visualization
-codex_connector/         # OpenAI Codex integration module
-├── __init__.py          #   Package init & public API
-├── config.py            #   Configuration (env vars / .env)
-├── api_client.py        #   OpenAI API wrapper with retry & cache
-├── core.py              #   High-level CodexConnector class
-└── utils.py             #   Helpers (logging, caching, text utils)
-cli.py                   # Codex command-line interface
-examples.py              # Runnable usage examples
-requirements.txt         # Python dependencies
+scores_L = QK^T/√d - 2α(Q_t_scaled)K^T/√d
 ```
+P_t动态更新，归一化确保修正幅度与标准scores同量级。Phase 2进入后200步线性warmup（避免激活冲击）。
+
+### Component 2：Geodesic Adam
+```
+g_t = P_t ⊙ grad   → 步长 × 2.0（类时方向）
+g_s = (I-P_t) ⊙ grad → 步长 × 0.5（类空方向）
+```
+类时方向步长是类空方向的4倍。
+
+### Component 3：MinkowskiLayerNorm（最关键）
+```
+标准LayerNorm:       x / sqrt(mean(x²) + ε)
+MinkowskiLayerNorm: x / sqrt(|<x,x>_η| + ε)
+<x,x>_η = ||x_s||² - ||x_t||²
+```
+用闵可夫斯基η-范数替代欧氏L2范数，保持几何信息在block之间的传递。
+
+### P_t（动态类时投影矩阵）
+两阶段训练协议：
+- Phase 1（前50%步数）：标准Adam收敛
+- Phase 2（后50%步数）：激活P_t，每100步Hutchinson估计更新
 
 ---
 
-## Codex Connector
+## 组件消融实验（wikitext-2）
 
-An OpenAI-powered code assistant integrated into this repository.
+| 版本 | 组件 | best val_loss | Phase 2改善 |
+|------|------|--------------|------------|
+| 对照 | 标准Transformer | 7.7182 | — |
+| 1 | 标准Transformer（旧基线） | 7.6739 | -0.001 |
+| 2 | +MinkowskiLayerNorm | **7.5069** | **-0.248** |
+| 3 | +洛伦兹FFN | 7.5518 | -0.183 |
+| 4 | +洛伦兹位置编码 | 7.5211 | -0.156 |
 
-```bash
-# Configure your API key
-cp .env.example .env
-# edit .env and set OPENAI_API_KEY=sk-...
+MinkowskiLayerNorm是效果最显著的单一组件。
 
-# CLI usage
-python cli.py generate "a Python function that reverses a string"
-python cli.py explain --file k1_unified.py
-python cli.py fix     --file my_script.py
-```
+---
+
+## 快速开始
 
 ```python
-from codex_connector import CodexConnector
+# 对比实验（标准Transformer对照组）
+log = baseline_train(d_model=256, n_layers=6, total_steps=10000)
 
-connector = CodexConnector(api_key="sk-...")
-code = connector.generate("a function that computes Fibonacci numbers")
-explanation = connector.explain(open("k1_unified.py").read())
+# 洛伦兹版本2
+log = wikitext_train(d_model=256, n_layers=6, total_steps=10000)
+
+# 合成任务快速验证（~3分钟）
+log = quick_train(n_hops=2, total_steps=2000)
 ```
 
-| Command    | Description                              |
-|------------|------------------------------------------|
-| `generate` | Generate code from a text description    |
-| `complete` | Complete an incomplete code snippet      |
-| `explain`  | Explain what a piece of code does        |
-| `fix`      | Identify and fix bugs                    |
-| `optimize` | Optimize for performance or readability  |
+---
+
+## 文件结构
+
+```
+lorentz_transformer.py    # 单文件完整实现（~2000行）
+│
+├── LorentzConfig              # 配置
+├── LorentzPositionalEncoding  # 洛伦兹位置编码
+├── MinkowskiLayerNorm         # 闵可夫斯基归一化（Component 3）
+├── LorentzMultiHeadAttention  # Minkowski注意力（Component 1）
+├── FeedForward                # 洛伦兹FFN（Component 4）
+├── TimeLikeProbe              # P_t动态更新管理器
+├── LorentzTransformer         # 主模型
+├── GeodesicAdam               # 测地线优化器（Component 2）
+├── LorentzCosineScheduler     # 学习率+α调度
+├── baseline_train()           # 标准Transformer对照组
+├── wikitext_train()           # 洛伦兹版本2（最优配置）
+└── quick_train()              # 快速验证
+```
 
 ---
 
-## Comparison with Standard Approaches
+## 理论背景
 
-| Property | Standard Transformers | K=1 Framework |
-|----------|----------------------|---------------|
-| Design method | Trial-and-error | Mathematically derived |
-| Optimality | Unknown | Proven |
-| Training monitor | Loss only | Loss + K-metric |
-| Theoretical basis | Empirical | Information geometry |
+基于K=1信息几何场方程（chronogeometrodynamics）。
+
+信息时间度量 `dt²_info = Σ_q Φ_q/H_q` 在参数空间定义了伪黎曼度量。Theorem 4证明：当且仅当det G < 0（洛伦兹签名）时，系统存在非平凡稳定边界 dc > 0。这使洛伦兹几何、辛结构、因果结构同时成为代数结果而非独立假设。
+
+**参考：**
+- Li, Y. Y. N. (2026). *K=1 Chronogeometrodynamics*. Zenodo. https://doi.org/10.5281/zenodo.19011128
 
 ---
+
+## 当前状态
+
+**已完成：**
+- ✅ 正式对比实验：洛伦兹比标准Transformer val_loss低0.21（2.74%）
+- ✅ Minkowski注意力 + MinkowskiLayerNorm + Geodesic Adam（三件套确认有效）
+- ✅ 洛伦兹FFN、洛伦兹位置编码（实现完成，需更多数据验证）
+- ✅ 真实语言数据上的伪黎曼结构验证（wikitext-2）
+- ✅ 层深类时规律发现
+
+**进行中：**
+- 🔄 更大数据集（openwebtext）验证
+- 🔄 论文写作
+
+**计划中：**
+- 📋 GPT-2规模（768维/12层）验证
+- 📋 多随机种子统计显著性验证
+
+---
+
+*洛伦兹Transformer项目 — 2025-2026*
+
+## License
+
+MIT
 
 ## Citation
 
 ```bibtex
-@article{li2026k1,
+@misc{li2026k1,
   author  = {Li, Y. Y. N.},
-  title   = {K=1 Chronogeometrodynamics: Lorentzian Geometry from Information Time},
+  title   = {K=1 Chronogeometrodynamics},
   year    = {2026},
-  doi     = {10.5281/zenodo.18949565}
+  publisher = {Zenodo},
+  doi     = {10.5281/zenodo.19011128},
+  url     = {https://doi.org/10.5281/zenodo.19011128}
 }
 ```
-
-## License
-
-[MIT](LICENSE)
