@@ -1,12 +1,40 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.backends.legacy:build"
 
-[tool.coverage.run]
-source = ["lorentz_transformer"]
-
-[tool.coverage.report]
-exclude_lines = [
-    'if __name__ == "__main__"',
-    "pragma: no cover",
+[project]
+name = "llcm"
+version = "1.0.0"
+description = "Lorentz Light-Cone Model: Geometry-Native Physical Intelligence"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+  {name = "Y. Y. N. Li"}
 ]
+keywords = [
+  "lorentz", "transformer", "physics", "robotics",
+  "causal", "information-geometry", "baby-talk"
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+  "torch>=2.0",
+  "numpy>=1.24",
+  "scipy>=1.10",
+  "sentence-transformers>=2.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "black", "flake8"]
+
+[project.urls]
+Repository = "https://github.com/papasop/k-1"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["llcm*", "experiments*", "lorentz_transformer*"]
